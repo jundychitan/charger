@@ -1,0 +1,643 @@
+#!/bin/bash
+project_dir=/projects/charger
+nfc_file=/var/txtalert/nfc.id
+employee_list=/projects/charger/employee_list
+charging_list=/projects/charger/charging_list
+slot_list=/projects/charger/slot_list
+config_file_dir=/projects/config_file
+sensor_dir=/projects/txtalert/config/sensor_status
+light_dir=/projects/charger/pixel_led/light
+blink_dir=/projects/charger/pixel_led/blink
+kbd_file=/var/txtalert/kbd
+filename=$nfc_file
+analog_dir=/tmp/txtalert/analog 
+
+#door sensor
+open=0
+close=1
+#solenoid lock
+lock=0
+unlock=1
+
+open_door_timeout=10 	#timeout for door opening
+close_door_timeout=20 	#timeout for door closing
+door_lock_timeout=30	#time delay until lock
+
+#serial port
+serial_port=/dev/ttyS0
+
+#led color
+RED=0xFF0000
+GREEN=0x00FF00
+BLUE=0xFF
+WHITE=0xFFFFFF
+ORANGE=0xFFFF00
+
+#charging parameters
+charging_delay=45
+
+timestamp(){
+	date +"%Y%m%d%H%M%S"
+}
+map_sensor(){ #map slot to sensor address
+	case $1 in
+		0)
+			echo "1_0"
+			;;
+		1)
+			echo "1_1"
+			;;
+		2)
+			echo "1_2"
+			;;
+		3)
+			echo "1_3"
+			;;
+		4)
+			echo "1_4"
+			;;
+		9)
+			echo "2_0"
+			;;
+		8)
+			echo "2_1"
+			;;
+		7)
+			echo "2_2"
+			;;
+		6)
+			echo "2_3"
+			;;
+		5)
+			echo "2_4"
+			;;
+		10)
+			echo "4_0"
+			;;
+		11)
+			echo "4_1"
+			;;
+		12)
+			echo "4_2"
+			;;
+		13)
+			echo "4_3"
+			;;
+		14)
+			echo "4_4"
+			;;
+		19)
+			echo "5_0"
+			;;
+		18)
+			echo "5_1"
+			;;
+		17)
+			echo "5_2"
+			;;
+		16)
+			echo "5_3"
+			;;
+		15)
+			echo "5_4"
+			;;			
+	esac
+}
+map_relay(){ #map slot to relay address
+	case $1 in
+		0)
+			echo "1_0"
+			;;
+		1)
+			echo "2_0"
+			;;
+		2)
+			echo "3_0"
+			;;
+		3)
+			echo "4_0"
+			;;
+		4)
+			echo "5_0"
+			;;
+		9)
+			echo "1_1"
+			;;
+		8)
+			echo "2_1"
+			;;
+		7)
+			echo "3_1"
+			;;
+		6)
+			echo "4_1"
+			;;
+		5)
+			echo "5_1"
+			;;
+		10)
+			echo "1_2"
+			;;
+		11)
+			echo "2_2"
+			;;
+		12)
+			echo "3_2"
+			;;
+		13)
+			echo "4_2"
+			;;
+		14)
+			echo "5_2"
+			;;
+		19)
+			echo "1_3"
+			;;
+		18)
+			echo "2_3"
+			;;
+		17)
+			echo "3_3"
+			;;
+		16)
+			echo "4_3"
+			;;
+		15)
+			echo "5_3"
+			;;			
+	esac
+}
+wait_for_door_event(){
+	slot=$1
+	timeout=$2	
+	inotifywait -t $timeout -q -e close_write $sensor_dir  | while read res
+	do
+		#echo $res
+		dir=$(echo $res |awk '{print $1}')$(echo $res |awk '{print $3}')
+		sensor_file_name=$(echo $res |awk '{print $3}')
+		event=$(echo $res |awk '{print $2}')
+		#echo $sensor_file_name
+		sensor=$(map_sensor $slot)
+		if [ "$sensor_file_name" == "$sensor" ]; then
+			if [ "$event" != "DELETE" ];
+			then
+				#echo "file changed: $dir"
+				sensor_name=$(cat $dir |awk -F, '{print $1}')
+				bit=$(cat $dir |awk -F, '{print $2}')
+				#echo $sensor_name
+				#echo $bit
+				if [ $bit -eq $open ]; then
+					echo "door opened"
+				else
+					echo "door closed"
+				fi				
+			fi
+			break
+		fi
+	done
+}
+control_relay(){
+	addr_bit=$(map_relay $1)
+	addr=$(echo $addr_bit |awk -F_ '{print $1}')
+	bit=$(echo $addr_bit |awk -F_ '{print $2}')
+	#generate random filename for can command
+	file_name=$(cat /dev/urandom | tr -dc "[:alpha:]" | head -c 8)
+	
+	#send command to can
+	if [ ! -d /var/txtalert/command ];
+	then
+		mkdir /var/txtalert/command
+	fi
+	echo -e "SID_H:04\r\nSID_L:$addr\r\nD0:FF\r\nD1:01\r\nD2:$bit\r\nD3:1\r\nD4:$2">/var/txtalert/command/$file_name
+	echo -e "SID_H:04\r\nSID_L:$addr\r\nD0:FF\r\nD1:01\r\nD2:$bit\r\nD3:1\r\nD4:$2"
+}
+control_relay_delay(){
+	addr_bit=$(map_relay $1)
+	addr=$(echo $addr_bit |awk -F_ '{print $1}')
+	bit=$(echo $addr_bit |awk -F_ '{print $2}')
+	#generate random filename for can command
+	file_name=$(cat /dev/urandom | tr -dc "[:alpha:]" | head -c 8)
+	
+	#send command to can
+	if [ ! -d /var/txtalert/command ];
+	then
+		mkdir /var/txtalert/command
+	fi
+	echo -e "SID_H:04\r\nSID_L:$addr\r\nD0:FF\r\nD1:01\r\nD2:$bit\r\nD3:2\r\nD4:$2">/var/txtalert/command/$file_name
+	echo -e "SID_H:04\r\nSID_L:$addr\r\nD0:FF\r\nD1:01\r\nD2:$bit\r\nD3:2\r\nD4:$2"
+}
+refresh_led(){
+	echo "allleds=0"> $serial_port
+	for d in {0..19} ; do
+		#echo "$d"
+		#addr=$(basename "$d")
+		addr=$blink_dir/$d
+		if [ -f $addr ]; then
+			#echo $addr
+			value=$(cat "$addr")
+			#echo $value
+			_addr=$(basename $addr)
+			#echo $_addr
+			echo "setblink=$_addr,$value"> $serial_port
+			sleep 0.01
+		fi
+	done
+
+	#for d in /projects/charger/pixel_led/light/* ; do
+	for d in {0..19} ; do
+		#echo "$d"
+		#addr=$(basename "$d")
+		addr=$light_dir/$d
+		if [ -f $addr ]; then
+			#echo $addr
+			value=$(cat "$addr")
+			_addr=$(basename $addr)
+			#echo $_addr
+			#echo $value
+			echo "setled=$_addr,$value"> $serial_port
+			sleep 0.01
+		fi
+	done
+}
+lightup_led(){ #params: 1 slot 2 color 3 blink
+	echo "allleds=0"> $serial_port
+	sleep 0.1
+	echo "setblink=$1,$3"> $serial_port
+	sleep 0.1
+	echo "setled=$1,$2"> $serial_port
+	sleep 0.1
+}
+save_led(){
+	echo "$3"> $blink_dir/$1
+	sleep 0.1
+	echo "$2"> $light_dir/$1
+	sleep 0.1
+	refresh_led
+}
+map_analog(){ #map slot to Analog input
+	case $1 in
+		0) 
+			echo "A0"
+			;;
+		9) 
+			echo "A0"
+			;;
+		10) 
+			echo "A0"
+			;;			
+		19) 
+			echo "A0"
+			;;			
+		15)
+			echo "A1"
+			;;									
+		16)
+			echo "A1"
+			;;	
+		17)
+			echo "A1"
+			;;			
+		18)
+			echo "A1"
+			;;				
+		11)
+			echo "A2"
+			;;				
+		12)
+			echo "A2"
+			;;				
+		13)
+			echo "A2"
+			;;				
+		14)
+			echo "A2"
+			;;				
+		5)
+			echo "A3"
+			;;				
+		6)
+			echo "A3"
+			;;				
+		7)
+			echo "A3"
+			;;				
+		8)
+			echo "A3"
+			;;				
+		1)
+			echo "A4"
+			;;				
+		2)
+			echo "A4"
+			;;				
+		3)
+			echo "A4"
+			;;				
+		4)
+			echo "A4"
+			;;
+	esac
+}
+wait_to_plug_charger_event(){
+	end=$((SECONDS+$charging_delay))
+	analog_port=$1
+	initial_current=$(cat /tmp/txtalert/analog/$analog_port)
+	initial_current=$((initial_current+10))
+	#echo "initial current: $initial_current"
+	#echo "charging current: $charging_current"
+	while [ $SECONDS -lt $end ]; do
+		# Do what you want.\
+		charging_current=$(cat /tmp/txtalert/analog/$analog_port)
+		if [ $charging_current -gt $initial_current ]; then
+			echo  "charging"
+			exit
+		fi
+		sleep 1
+		:
+	done
+	echo "not charging"
+}
+
+stty -F $serial_port 9600 -opost
+echo "color"> $serial_port
+
+sleep 5
+refresh_led
+
+while inotifywait -q -e modify $filename >/dev/null; 
+do
+	#echo "file is changed"
+	nfc_id=$(cat $nfc_file)	
+	#convert to decimal value
+	nfc_id=$(( 16#$nfc_id ))
+	#echo $nfc_id
+	employee=$(grep -w $nfc_id $employee_list)
+	#echo $employee
+	if [ $? -eq 0 ]; then
+		IFS=',' read -ra employee_id <<< "$employee"	
+		emp_id=${employee_id[1]}
+		designation=${employee_id[2]}
+		#echo $emp_id
+		if [ "$designation" == "supervisor" ]; then #supervisor
+			echo "fire"> $serial_port
+			#read -t 1 -n 10000 discard #discard buffer before reading
+			#read -t 5 -p "you are supervisor.. select door to unlock: " -a slot
+			kbd_event=$(inotifywait -t 30 -q -e modify $kbd_file)
+			if [ ${#kbd_event} -gt 0 ];then
+				slot=$(cat $kbd_file)
+				re='^[0-9]+$'
+				if [[ $slot =~ $re ]] ; then
+					if [ $slot -ge 0 -a $slot -le 19 ];then
+						echo "slot selected: $slot"
+						selected=$(grep -w "slot $slot" $charging_list)
+						if [ $? -eq 0 ]; then #slot is in list
+							IFS=',' read -ra id <<< "$selected"
+							echo ${id[2]}
+							echo "unlocking slot no.: $slot"
+							#unlock door and wait until door is opened
+							lightup_led $slot $WHITE 1
+							control_relay_delay $slot $door_lock_timeout							
+							door_status=$(wait_for_door_event $slot $open_door_timeout)
+							echo $door_status
+							if [ "$door_status" == "door opened" ]; then
+								sed -i "/${id[2]}/d" $charging_list
+								lightup_led $slot $GREEN 1															
+								#control_relay $slot $lock
+								door_status=$(wait_for_door_event $slot $close_door_timeout)
+								echo $door_status
+								if [ "$door_status" == "door closed" ]; then
+									control_relay $slot $lock
+									save_led $slot $GREEN 0
+								else #wait indefinetely if door not closed within prescribed time				
+									lightup_led $slot $WHITE 1
+									while [ 1 ];
+									do
+										door_status=$(wait_for_door_event $slot 0)
+										echo $door_status
+										if [ "$door_status" == "door closed" ]; then
+											control_relay $slot $lock
+											save_led $slot $GREEN 0
+											echo "door closed"
+											break
+										fi
+									done
+								fi									
+								
+							else
+								echo "not opened"
+								refresh_led
+								control_relay $slot $lock
+							fi
+						else #slot seletected not in list
+							echo "slot not occupied..opening it anyway"
+							lightup_led $slot $WHITE 1
+							control_relay_delay $slot $door_lock_timeout							
+							door_status=$(wait_for_door_event $slot $open_door_timeout)
+							echo $door_status
+							if [ "$door_status" == "door opened" ]; then
+								lightup_led $slot $GREEN 1															
+								#control_relay $slot $lock
+								door_status=$(wait_for_door_event $slot $close_door_timeout)
+								echo $door_status
+								if [ "$door_status" == "door closed" ]; then	
+									control_relay $slot $lock
+									save_led $slot $GREEN 0
+								else
+									lightup_led $slot $WHITE 1
+									while [ 1 ];
+									do
+										door_status=$(wait_for_door_event $slot 0)
+										echo $door_status
+										if [ "$door_status" == "door closed" ]; then
+											control_relay $slot $lock
+											refresh_led
+											echo "door closed"
+											break
+										fi
+									done								
+								fi
+							else
+								echo "not opened"
+								refresh_led
+								control_relay $slot $lock							
+							fi
+						fi
+					else
+						refresh_led
+						echo "invalid slot seletected.."
+					fi	
+				else
+					refresh_led
+					echo "invalid selection.."
+				fi
+			else
+				refresh_led
+				echo
+				echo "no doors selected"
+			fi
+		else #employee
+			charging_employee=$(grep -w $nfc_id $charging_list)
+			result=$?
+			echo $result
+			if [ $result -eq 1 ]; then #inbound
+				echo "look for slot available"	
+				slot_found=0
+				for i in {0..19}
+				do
+					slot_avail=$(grep -w "slot $i" $charging_list)
+					if [ $? -eq 1 ]; then # slot is not in list, so its available						
+						slot=$i
+						analog_port=$(map_analog $slot)
+						echo "Analog Port: $analog_port"
+						echo "available slot# $slot"
+						initial_current=$(cat $analog_dir/$analog_port)
+						echo "initial_current: $initial_current"							
+						slot_found=1
+						lightup_led $slot $WHITE 0				
+						#unlock door and wait until door is opened						
+						control_relay_delay $slot $door_lock_timeout
+						door_status=$(wait_for_door_event $slot $open_door_timeout)
+						echo $door_status
+						if [ "$door_status" == "door opened" ]; then
+							#echo "door_opened"
+							#check if phone is plugged to charger and is charging
+							lightup_led $slot $WHITE 1
+							charging_state=$(wait_to_plug_charger_event $analog_port)
+							#charging_state="charging"
+							if [ "$charging_state" == "charging" ]; then
+								lightup_led $slot $RED 1
+								echo "${employee_id[1]},$(timestamp),slot $i">> $charging_list
+								echo "employee added to charging list"														
+								#control_relay $slot $lock
+							else 
+								lightup_led $slot $GREEN 1
+								echo "not charging... employee not added"
+							fi							
+
+							door_status=$(wait_for_door_event $slot $close_door_timeout)
+							echo $door_status
+							if [ "$door_status" == "door closed" ]; then
+								control_relay $slot $lock
+								if [ "$charging_state" == "charging" ]; then
+									save_led $slot $RED 0
+								else 
+									save_led $slot $GREEN 0
+								fi
+							else #wait indefinetely if door not closed within prescribed time				
+								lightup_led $slot $ORANGE 1
+								control_relay $slot $lock
+								while [ 1 ];
+								do
+									door_status=$(wait_for_door_event $slot 5)
+									echo $door_status
+									if [ "$door_status" == "door closed" ]; then
+										#control_relay $slot $lock
+										if [ "$charging_state" == "charging" ]; then
+											save_led $slot $RED 0
+										else 
+											save_led $slot $GREEN 0
+										fi
+										echo "door closed"
+										break
+									else 
+										echo "door sensor not detected"
+										lightup_led $slot $ORANGE 0
+										save_led $slot $ORANGE 0
+										echo "0,$(timestamp),slot $i">> $charging_list #blacklist this slot because sensor is not working
+										break
+									fi
+								done
+							fi																														
+						else
+							echo "not opened"
+							refresh_led
+							control_relay $slot $lock
+							
+						fi
+						echo "done"	
+						break
+					fi
+				done
+				if [ $slot_found -eq 0 ]; then
+					refresh_led
+					echo "no slot available..."
+				fi
+			else #outbound
+				echo "existing.. will delete from list"
+				IFS=',' read -ra employee_id <<< "$charging_employee"
+				echo "employee id: ${employee_id[0]}"
+				echo "datetime   : ${employee_id[1]}"
+				IFS=' ' read -ra slot <<< "${employee_id[2]}"
+				slot=${slot[1]}
+				echo "slot no    : $slot"
+				seconds1=$(date --date "$(echo "${employee_id[1]}" | sed -nr 's/(....)(..)(..)(..)(..)(..)/\1-\2-\3 \4:\5:\6/p')" +%s)
+				seconds2=$(date --date "$(echo "$(timestamp)" | sed -nr 's/(....)(..)(..)(..)(..)(..)/\1-\2-\3 \4:\5:\6/p')" +%s)
+				delta=$((seconds2 - seconds1))
+				echo "$delta seconds"  				
+				lightup_led $slot $WHITE 1				
+				#unlock door and wait until door is opened
+				control_relay_delay $slot $door_lock_timeout
+				door_status=$(wait_for_door_event $slot $open_door_timeout)
+				echo $door_status
+				if [ "$door_status" == "door opened" ]; then
+					lightup_led $slot $GREEN 1
+					echo "door_opened"
+					sed -i "/$emp_id/d" $charging_list #remove employee from charging list
+					#now lock the door and wait till closed
+					door_status=$(wait_for_door_event $slot $close_door_timeout)
+					echo $door_status
+					if [ "$door_status" == "door closed" ]; then
+						echo "door_closed"	
+						control_relay $slot $lock
+						save_led $slot $GREEN 0
+						echo "door_closed"
+					else #wait indefinetely if door not closed within prescribed time				
+						echo "not closed... wait until closed"
+						lightup_led $slot $ORANGE 1
+						control_relay $slot $lock
+						while [ 1 ];
+						do
+							door_status=$(wait_for_door_event $slot 5)
+							echo $door_status
+							if [ "$door_status" == "door closed" ]; then
+								save_led $slot $GREEN 0
+								echo "door closed"
+								break
+							else 
+								echo "door sensor not detected"
+								lightup_led $slot $ORANGE 0
+								save_led $slot $ORANGE 0
+								echo "0,$(timestamp),slot $i">> $charging_list #blacklist this slot because sensor is not working
+								break
+							fi
+						done
+					fi							
+				else
+					echo "not opened"
+					refresh_led
+					control_relay $slot $lock
+				fi				
+				echo "done"	
+			fi
+		fi
+	else
+		echo "employee not found..."
+		#read -t 2 -p "Add ID? (y/n)" -a answer -N 1; echo #use this if run in terminal
+		kbd_event=$(inotifywait -t 5 -q -e modify $kbd_file) #use this when run locally
+		if [ ${#kbd_event} -gt 0 ];then
+			slot=$(cat $kbd_file)
+			re='^[0-9]+$'
+			echo "keypressed: "$slot"*"
+		else	
+			echo "no key pressed"
+		fi
+
+		#if [ "$answer" == "y" ]; then #use this if run in terminal
+		if [ "$slot" == "1" ]; then #use this when run locally
+			echo "employee added.."
+			echo "0001,$nfc_id">>$employee_list
+		else	
+			echo "not added.."
+		fi
+	fi
+done
