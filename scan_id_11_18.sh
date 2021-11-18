@@ -1,10 +1,4 @@
 #!/bin/bash
-#project 		:okada charging station
-#description	:this script will read nfc serial number and operate the charging cabinet
-#author			:jun dychitan (Dychitan Electronics Corp)
-#date 			:11182021
-#version 		:2.1
-#=========================================================================================
 
 project_dir=/projects/charger
 nfc_file=/var/txtalert/nfc.id
@@ -18,7 +12,6 @@ blink_dir=/projects/charger/pixel_led/blink
 kbd_file=/var/txtalert/kbd
 filename=$nfc_file
 analog_dir=/tmp/txtalert/analog 
-no_charge_list=/projects/no_charge_list
 
 #door sensor
 open=0
@@ -33,7 +26,6 @@ door_lock_timeout=30	#time delay until lock
 
 #serial port
 serial_port=/dev/ttyAMA0
-#serial_port=/dev/ttyS0
 
 #led color
 RED=0xFF0000
@@ -41,12 +33,10 @@ GREEN=0x00FF00
 BLUE=0xFF
 WHITE=0xFFFFFF
 #ORANGE=0xFFFF00
-#ORANGE=0xFF
-ORANGE=0
+ORANGE=0xFF
 
 #charging parameters
-#charging_delay=45
-charging_delay=30
+charging_delay=45
 
 timestamp(){
 	date +"%Y%m%d%H%M%S"
@@ -591,29 +581,8 @@ do
 											fi
 										fi
 									fi
-								else
-									#not charging 
-									#if still not charging for next 5 tries, it will blacklist this door
-									if [ ! -d $no_charge_list ]; then
-										mkdir $no_charge_list
-									fi
-									if [ -f $no_charge_list/$slot ]; then
-										_value=$(cat $no_charge_list/$slot)
-										((_value+=1))
-										if [ $_value -gt 5 ]; then
-											rm $no_charge_list/$slot
-											#blacklist this slot if not charging more than 5 times
-											echo "0,$(timestamp),slot $i">> $charging_list
-											save_led $slot $ORANGE 0
-										else 
-											#if not, save the current tries
-											echo $_value>$no_charge_list/$slot
-											save_led $slot $GREEN 0
-										fi
-									else
-										echo "1">$no_charge_list/$slot
-										save_led $slot $GREEN 0
-									fi									
+								else 
+									save_led $slot $GREEN 0
 								fi
 							else #wait if door not closed within prescribed time				
 								lightup_led $slot $ORANGE 1
@@ -654,28 +623,7 @@ do
 											fi
 										fi
 									else 
-										#not charging 
-										#if still not charging for next 5 tries, it will blacklist this door
-										if [ ! -d $no_charge_list ]; then
-											mkdir $no_charge_list
-										fi
-										if [ -f $no_charge_list/$slot ]; then
-											_value=$(cat $no_charge_list/$slot)
-											((_value+=1))
-											if [ $_value -gt 5 ]; then
-												rm $no_charge_list/$slot
-												#blacklist this slot if not charging more than 5 times
-												echo "0,$(timestamp),slot $i">> $charging_list
-												save_led $slot $ORANGE 0
-											else 
-												#if not, save the current tries
-												echo $_value>$no_charge_list/$slot
-												save_led $slot $GREEN 0
-											fi
-										else
-											echo "1">$no_charge_list/$slot
-											save_led $slot $GREEN 0
-										fi
+										save_led $slot $GREEN 0
 									fi
 								else 
 									echo "door sensor not detected"
