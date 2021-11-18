@@ -1,4 +1,5 @@
 #!/bin/bash
+
 project_dir=/projects/charger
 nfc_file=/var/txtalert/nfc.id
 employee_list=/projects/charger/employee_list
@@ -24,14 +25,15 @@ close_door_timeout=20 	#timeout for door closing
 door_lock_timeout=30	#time delay until lock
 
 #serial port
-serial_port=/dev/ttyS0
+serial_port=/dev/ttyAMA0
 
 #led color
 RED=0xFF0000
 GREEN=0x00FF00
 BLUE=0xFF
 WHITE=0xFFFFFF
-ORANGE=0xFFFF00
+#ORANGE=0xFFFF00
+ORANGE=0xFF
 
 #charging parameters
 charging_delay=45
@@ -230,6 +232,19 @@ map_analog(){ #map slot to Analog input
 			echo "A4"
 			;;
 	esac
+}
+
+read_door_status(){
+	slot=$1
+	sensor=$(map_sensor $slot)
+	bit=$(cat $sensor_dir/$sensor |awk -F, '{print $2}')
+	#echo $sensor_name
+	#echo $bit
+	if [ $bit -eq $open ]; then
+		echo "door opened"
+	else
+		echo "door closed"
+	fi	
 }
 
 wait_for_door_event(){
@@ -525,9 +540,14 @@ do
 								lightup_led $slot $GREEN 1
 								echo "not charging... employee not added"
 							fi							
-
-							door_status=$(wait_for_door_event $slot $close_door_timeout)
+							
+							door_status=$(read_door_status $slot)
 							echo $door_status
+							if [ "$door_status" != "door closed" ]; then
+								echo "wait for door closing"
+								door_status=$(wait_for_door_event $slot $close_door_timeout)
+								echo $door_status
+							fi
 							if [ "$door_status" == "door closed" ]; then
 								control_relay $slot $lock
 								if [ "$charging_state" == "charging" ]; then
@@ -611,7 +631,7 @@ do
 									save_led $slot $ORANGE 0
 									echo "0,$(timestamp),slot $i">> $charging_list #blacklist this slot because sensor is not working
 								fi
-							fi																														
+							fi																													
 						else
 							echo "not opened"
 							refresh_led
@@ -705,3 +725,4 @@ do
 		fi
 	fi
 done
+
