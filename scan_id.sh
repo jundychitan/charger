@@ -3,7 +3,7 @@
 #project 		:okada charging station
 #description	:this script will read nfc serial number and operate the charging cabinet
 #author			:jun dychitan (Dychitan Electronics Corp)
-#date 			:11182021
+#date 			:12012021
 #version 		:2.1
 #=========================================================================================
 
@@ -48,6 +48,7 @@ ORANGE=0
 #charging parameters
 #charging_delay=45
 charging_delay=30
+charge_timeout=14400	#no. of seconds allowed to charge; 14400 = 4 hrs
 
 timestamp(){
 	date +"%Y%m%d%H%M%S"
@@ -712,51 +713,59 @@ do
 				seconds1=$(date --date "$(echo "${employee_id[1]}" | sed -nr 's/(....)(..)(..)(..)(..)(..)/\1-\2-\3 \4:\5:\6/p')" +%s)
 				seconds2=$(date --date "$(echo "$(timestamp)" | sed -nr 's/(....)(..)(..)(..)(..)(..)/\1-\2-\3 \4:\5:\6/p')" +%s)
 				delta=$((seconds2 - seconds1))
-				echo "$delta seconds"  				
-				lightup_led $slot $WHITE 1				
-				#unlock door and wait until door is opened
-				control_relay_delay $slot $door_lock_timeout
-				door_status=$(wait_for_door_event $slot $open_door_timeout)
-				echo $door_status
-				if [ "$door_status" == "door opened" ]; then
-					lightup_led $slot $GREEN 1
-					echo "door_opened"
-					sed -i "/$emp_id/d" $charging_list #remove employee from charging list
-					#now lock the door and wait till closed
-					door_status=$(wait_for_door_event $slot $close_door_timeout)
+				echo "$delta seconds" 
+				if [ $delta -gt $charge_timeout ]; then 
+					#charging timed out 
+					#will not open the door, instead blue light will blink for 5 seconds and stay blue after.
+					lightup_led $slot $BLUE 1
+					sleep 5
+					save_led $slot $BLUE 0
+				else 				
+					lightup_led $slot $WHITE 1				
+					#unlock door and wait until door is opened
+					control_relay_delay $slot $door_lock_timeout
+					door_status=$(wait_for_door_event $slot $open_door_timeout)
 					echo $door_status
-					if [ "$door_status" == "door closed" ]; then
-						echo "door_closed"	
+					if [ "$door_status" == "door opened" ]; then
+						lightup_led $slot $GREEN 1
+						echo "door_opened"
+						sed -i "/$emp_id/d" $charging_list #remove employee from charging list
+						#now lock the door and wait till closed
+						door_status=$(wait_for_door_event $slot $close_door_timeout)
+						echo $door_status
+						if [ "$door_status" == "door closed" ]; then
+							echo "door_closed"	
+							control_relay $slot $lock
+							save_led $slot $GREEN 0
+							echo "door_closed"
+						else #wait indefinetely if door not closed within prescribed time				
+							echo "not closed... wait until closed"
+							lightup_led $slot $ORANGE 1
+							control_relay $slot $lock
+							while [ 1 ];
+							do
+								door_status=$(wait_for_door_event $slot 5)
+								echo $door_status
+								if [ "$door_status" == "door closed" ]; then
+									save_led $slot $GREEN 0
+									echo "door closed"
+									break
+								else 
+									echo "door sensor not detected"
+									lightup_led $slot $ORANGE 0
+									save_led $slot $ORANGE 0
+									echo "0,$(timestamp),slot $i">> $charging_list #blacklist this slot because sensor is not working
+									break
+								fi
+							done
+						fi							
+					else
+						echo "not opened"
+						refresh_led
 						control_relay $slot $lock
-						save_led $slot $GREEN 0
-						echo "door_closed"
-					else #wait indefinetely if door not closed within prescribed time				
-						echo "not closed... wait until closed"
-						lightup_led $slot $ORANGE 1
-						control_relay $slot $lock
-						while [ 1 ];
-						do
-							door_status=$(wait_for_door_event $slot 5)
-							echo $door_status
-							if [ "$door_status" == "door closed" ]; then
-								save_led $slot $GREEN 0
-								echo "door closed"
-								break
-							else 
-								echo "door sensor not detected"
-								lightup_led $slot $ORANGE 0
-								save_led $slot $ORANGE 0
-								echo "0,$(timestamp),slot $i">> $charging_list #blacklist this slot because sensor is not working
-								break
-							fi
-						done
-					fi							
-				else
-					echo "not opened"
-					refresh_led
-					control_relay $slot $lock
-				fi				
-				echo "done"	
+					fi				
+					echo "done"	
+				fi
 			fi
 		fi
 	else
