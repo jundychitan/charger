@@ -1,4 +1,5 @@
 #!/bin/bash
+
 #project 		:okada charging station
 #description	:this script will read nfc serial number and operate the charging cabinet
 #author			:jun dychitan (Dychitan Electronics Corp)
@@ -18,7 +19,7 @@ blink_dir=/projects/charger/pixel_led/blink
 kbd_file=/var/txtalert/kbd
 filename=$nfc_file
 analog_dir=/tmp/txtalert/analog 
-no_charge_list=/projects/no_charge_list
+no_charge_list=$project_dir/no_charge_list
 
 #door sensor
 open=0
@@ -426,6 +427,7 @@ do
 				if [[ $slot =~ $re ]] ; then
 					if [ $slot -ge 0 -a $slot -le 19 ];then
 						echo "slot selected: $slot"
+						rm $no_charge_list/$slot
 						selected=$(grep -w "slot $slot" $charging_list)
 						if [ $? -eq 0 ]; then #slot is in list
 							IFS=',' read -ra id <<< "$selected"
@@ -438,6 +440,7 @@ do
 							echo $door_status
 							if [ "$door_status" == "door opened" ]; then
 								sed -i "/${id[2]}/d" $charging_list
+
 								lightup_led $slot $GREEN 1															
 								#control_relay $slot $lock
 								door_status=$(wait_for_door_event $slot $close_door_timeout)
@@ -777,4 +780,7 @@ do
 		fi
 	fi
 done
+
+
+
 
