@@ -570,6 +570,10 @@ do
 										echo "${employee_id[1]},$(timestamp),slot $i">> $charging_list
 										echo "employee added to charging list"	
 										save_led $slot $RED 0
+										#remove the slot not charging counter if the slot is able to charge
+										if [ -f $no_charge_list/$slot ]; then
+											rm $no_charge_list/$slot
+										fi
 									else 
 										#phone removed before closing
 										#unlcok door and wait until closed
