@@ -579,7 +579,13 @@ do
 										#unlcok door and wait until closed
 										lightup_led $slot $GREEN1 1 #blink green to indicate waiting to be closed
 										control_relay_delay $slot $door_lock_timeout
-										door_status=$(wait_for_door_event $slot $close_door_timeout)
+										door_status=$(read_door_status $slot)
+										echo $door_status
+										if [ "$door_status" != "door closed" ]; then
+											echo "wait for door closing"
+											door_status=$(wait_for_door_event $slot $close_door_timeout)
+											echo $door_status
+										fi
 										if [ "$door_status" == "door closed" ]; then
 											control_relay $slot $lock
 											save_led $slot $GREEN 0 #set to solid green to indicate vacant slot
