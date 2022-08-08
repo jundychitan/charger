@@ -44,6 +44,7 @@ WHITE=0xFFFFFF
 #ORANGE=0xFFFF00
 #ORANGE=0xFF
 ORANGE=0
+LED
 
 #charging parameters
 #harging_delay=45
@@ -478,17 +479,20 @@ refresh_led
 while inotifywait -q -e modify $filename >/dev/null; 
 do
 	#echo "file is changed"
-	nfc_id_hex=$(cat $nfc_file)	
+	nfc_id=$(cat $nfc_file)
+	#reverse the order of the scanned nfc id
+	nfc_id_rev=$(echo $nfc_id|fold -w2|tac|tr -d '\n')
 	#convert to decimal value
-	nfc_id=$(( 16#$nfc_id_hex ))
+	nfc_id=$(( 16#$nfc_id_rev ))
 	echo $nfc_id
 	employee=$(grep -w $nfc_id $employee_list)
-	#echo "employee: $employee"
+	#echo $employee
 	if [ $? -eq 0 ]; then
 		IFS=',' read -ra employee_id <<< "$employee"	
-		emp_id=${employee_id[1]}
-		designation=${employee_id[2]}
-		echo $emp_id
+        emp_id=${employee_id[1]}
+        _designation=${employee_id[2]}
+        designation=$(echo $_designation|tr -d '\r')
+        echo "designation: *"$designation"*"
 		if [ "$designation" == "supervisor" ]; then #supervisor
 			echo "fire"> $serial_port
 			#read -t 1 -n 10000 discard #discard buffer before reading
