@@ -33,13 +33,8 @@ close_door_timeout=20 	#timeout for door closing
 door_lock_timeout=30	#time delay until lock
 
 #serial port
-<<<<<<< HEAD
-#serial_port=/dev/ttyAMA0
-serial_port=/dev/ttyS0
-=======
 serial_port=/dev/ttyAMA0
 #serial_port=/dev/ttyS0
->>>>>>> ac4290566f42e03489560f48b1e5c2026dd30b82
 
 #led color
 RED=0xFF0000
@@ -49,16 +44,9 @@ WHITE=0xFFFFFF
 #ORANGE=0xFFFF00
 #ORANGE=0xFF
 ORANGE=0
-<<<<<<< HEAD
 
 #charging parameters
 #charging_delay=45
-=======
-LED
-
-#charging parameters
-#harging_delay=45
->>>>>>> ac4290566f42e03489560f48b1e5c2026dd30b82
 charging_delay=30
 charge_timeout=14400	#no. of seconds allowed to charge; 14400 = 4 hrs
 
@@ -194,15 +182,10 @@ map_relay(){ #map slot to relay address
 	esac
 }
 map_analog(){ #map slot to Analog input
-<<<<<<< HEAD
-=======
-
->>>>>>> ac4290566f42e03489560f48b1e5c2026dd30b82
 	case $1 in
 		0) 
 			echo "A0"
 			;;
-<<<<<<< HEAD
 		9) 
 			echo "A0"
 			;;
@@ -223,37 +206,6 @@ map_analog(){ #map slot to Analog input
 			;;			
 		18)
 			echo "A1"
-=======
-		1) 
-			echo "A0"
-			;;
-		2) 
-			echo "A0"
-			;;			
-		3) 
-			echo "A0"
-			;;			
-		4)
-			echo "A0"
-			;;									
-		5)
-			echo "A3"
-			;;	
-		6)
-			echo "A3"
-			;;			
-		7)
-			echo "A3"
-			;;				
-		8)
-			echo "A3"
-			;;				
-		9)
-			echo "A3"
-			;;				
-		10)
-			echo "A2"
->>>>>>> ac4290566f42e03489560f48b1e5c2026dd30b82
 			;;				
 		11)
 			echo "A2"
@@ -267,7 +219,6 @@ map_analog(){ #map slot to Analog input
 		14)
 			echo "A2"
 			;;				
-<<<<<<< HEAD
 		5)
 			echo "A3"
 			;;				
@@ -292,86 +243,6 @@ map_analog(){ #map slot to Analog input
 		4)
 			echo "A4"
 			;;
-=======
-		15)
-			echo "A1"
-			;;				
-		16)
-			echo "A1"
-			;;				
-		17)
-			echo "A1"
-			;;				
-		18)
-			echo "A1"
-			;;				
-		19)
-			echo "A1"
-			;;
-
-
-	# case $1 in
-	# 	0) 
-	# 		echo "A0"
-	# 		;;
-	# 	9) 
-	# 		echo "A0"
-	# 		;;
-	# 	10) 
-	# 		echo "A0"
-	# 		;;			
-	# 	19) 
-	# 		echo "A0"
-	# 		;;			
-	# 	15)
-	# 		echo "A1"
-	# 		;;									
-	# 	16)
-	# 		echo "A1"
-	# 		;;	
-	# 	17)
-	# 		echo "A1"
-	# 		;;			
-	# 	18)
-	# 		echo "A1"
-	# 		;;				
-	# 	11)
-	# 		echo "A2"
-	# 		;;				
-	# 	12)
-	# 		echo "A2"
-	# 		;;				
-	# 	13)
-	# 		echo "A2"
-	# 		;;				
-	# 	14)
-	# 		echo "A2"
-	# 		;;				
-	# 	5)
-	# 		echo "A3"
-	# 		;;				
-	# 	6)
-	# 		echo "A3"
-	# 		;;				
-	# 	7)
-	# 		echo "A3"
-	# 		;;				
-	# 	8)
-	# 		echo "A3"
-	# 		;;				
-	# 	1)
-	# 		echo "A4"
-	# 		;;				
-	# 	2)
-	# 		echo "A4"
-	# 		;;				
-	# 	3)
-	# 		echo "A4"
-	# 		;;				
-	# 	4)
-	# 		echo "A4"
-	# 		;;
->>>>>>> ac4290566f42e03489560f48b1e5c2026dd30b82
 	esac
 }
 
@@ -448,23 +319,18 @@ control_relay_delay(){
 	echo -e "SID_H:04\r\nSID_L:$addr\r\nD0:FF\r\nD1:01\r\nD2:$bit\r\nD3:2\r\nD4:$2"
 }
 refresh_led(){
-	echo "setbright=50"> $serial_port
 	echo "allleds=0"> $serial_port
 	for d in {0..19} ; do
 		#echo "$d"
 		#addr=$(basename "$d")
 		addr=$blink_dir/$d
-		_addr=$(basename $addr)
 		if [ -f $addr ]; then
 			#echo $addr
 			value=$(cat "$addr")
-			#echo $value			
+			#echo $value
+			_addr=$(basename $addr)
 			#echo $_addr
 			echo "setblink=$_addr,$value"> $serial_port
-			sleep 0.01
-		else 
-			echo "setblink=$_addr,0"> $serial_port						
-			echo "0">$blink_dir/$d
 			sleep 0.01
 		fi
 	done
@@ -474,18 +340,14 @@ refresh_led(){
 		#echo "$d"
 		#addr=$(basename "$d")
 		addr=$light_dir/$d
-		_addr=$(basename $addr)
 		if [ -f $addr ]; then
 			#echo $addr
 			value=$(cat "$addr")
+			_addr=$(basename $addr)
 			#echo $_addr
 			#echo $value
 			echo "setled=$_addr,$value"> $serial_port
 			sleep 0.01
-		else 
-			echo "setled=$_addr,0x00FF00"> $serial_port			
-			echo "0x00FF00">$light_dir/$d
-			sleep 0.01		
 		fi
 	done
 }
@@ -505,13 +367,12 @@ save_led(){
 	refresh_led
 }
 wait_to_plug_charger_event(){
-	#echo "wait to plug charger"
 	end=$((SECONDS+$charging_delay))
 	analog_port=$1
 	initial_current=$(cat $analog_dir/$analog_port)
 	initial_current=$((initial_current+10))
-	#echo "initial current:" $initial_current
-	#echo "charging current:" $charging_current
+	#echo "initial current: $initial_current"
+	#echo "charging current: $charging_current"
 	while [ $SECONDS -lt $end ]; do
 		# Do what you want.\
 		charging_current=$(cat /tmp/txtalert/analog/$analog_port)
@@ -520,19 +381,9 @@ wait_to_plug_charger_event(){
 			exit
 		fi
 		sleep 1
+		:
 	done
-	#echo "not charging"
-}
-re_check_if_charging(){
-	analog_port=$1
-	charging_current=$2
-	charging_current=$((charging_current-2))
-	final_current=$(cat $analog_dir//$analog_port)
-	if [ $final_current -lt $charging_current ]; then
-		echo "not charging"
-	else 
-		echo "charging"
-	fi  
+	echo "not charging"
 }
 re_check_if_charging(){
 	analog_port=$1
@@ -555,27 +406,17 @@ refresh_led
 while inotifywait -q -e modify $filename >/dev/null; 
 do
 	#echo "file is changed"
-	nfc_id=$(cat $nfc_file)
-	#reverse the order of the scanned nfc id
-	nfc_id_rev=$(echo $nfc_id|fold -w2|tac|tr -d '\n')
+	nfc_id=$(cat $nfc_file)	
 	#convert to decimal value
-	nfc_id=$(( 16#$nfc_id_rev ))
-	echo $nfc_id
+	nfc_id=$(( 16#$nfc_id ))
+	#echo $nfc_id
 	employee=$(grep -w $nfc_id $employee_list)
 	#echo $employee
 	if [ $? -eq 0 ]; then
 		IFS=',' read -ra employee_id <<< "$employee"	
-<<<<<<< HEAD
 		emp_id=${employee_id[1]}
-		_designation=${employee_id[2]}
-        	designation=$(echo $_designation|tr -d '\r')
-       		echo "designation: *"$designation"*"
-=======
-        emp_id=${employee_id[1]}
-        _designation=${employee_id[2]}
-        designation=$(echo $_designation|tr -d '\r')
-        echo "designation: *"$designation"*"
->>>>>>> ac4290566f42e03489560f48b1e5c2026dd30b82
+		designation=${employee_id[2]}
+		#echo $emp_id
 		if [ "$designation" == "supervisor" ]; then #supervisor
 			echo "fire"> $serial_port
 			#read -t 1 -n 10000 discard #discard buffer before reading
@@ -678,7 +519,7 @@ do
 		else #employee
 			charging_employee=$(grep -w $nfc_id $charging_list)
 			result=$?
-			#echo $result
+			echo $result
 			if [ $result -eq 1 ]; then #inbound
 				echo "look for slot available"	
 				slot_found=0
@@ -702,7 +543,6 @@ do
 							#echo "door_opened"
 							#check if phone is plugged to charger and is charging
 							lightup_led $slot $WHITE 1
-<<<<<<< HEAD
 							charging_state=$(wait_to_plug_charger_event $analog_port) #check if phone is plugged to charger
 							#charging_state="charging"
 							if [ "$charging_state" == "charging" ]; then
@@ -710,16 +550,6 @@ do
 								initial_current=$(cat $analog_dir/$analog_port) #get the charging current
 								#echo "${employee_id[1]},$(timestamp),slot $i">> $charging_list
 								#echo "employee added to charging list"																						
-=======
-							echo $SECONDS
-							charging_state=$(wait_to_plug_charger_event $analog_port) #check if phone is plugged to charger
-							echo $SECONDS
-							echo $charging_state
-							#charging_state="charging"
-							if [ "$charging_state" == "charging" ]; then
-								lightup_led $slot $RED 1
-								initial_current=$(cat $analog_dir/$analog_port) #get the charging current																				
->>>>>>> ac4290566f42e03489560f48b1e5c2026dd30b82
 							else 
 								lightup_led $slot $GREEN 1
 								echo "not charging... employee not added"
@@ -737,11 +567,7 @@ do
 								if [ "$charging_state" == "charging" ]; then
 									charging_state=$(re_check_if_charging $analog_port $initial_current)
 									if [ "$charging_state" == "charging" ]; then
-<<<<<<< HEAD
 										echo "${employee_id[1]},$(timestamp),slot $i">> $charging_list
-=======
-										echo "$nfc_id,$(timestamp),slot $i">> $charging_list
->>>>>>> ac4290566f42e03489560f48b1e5c2026dd30b82
 										echo "employee added to charging list"	
 										save_led $slot $RED 0
 										#remove the slot not charging counter if the slot is able to charge
@@ -913,11 +739,7 @@ do
 					if [ "$door_status" == "door opened" ]; then
 						lightup_led $slot $GREEN 1
 						echo "door_opened"
-<<<<<<< HEAD
 						sed -i "/$emp_id/d" $charging_list #remove employee from charging list
-=======
-						sed -i "/$nfc_id/d" $charging_list #remove employee from charging list
->>>>>>> ac4290566f42e03489560f48b1e5c2026dd30b82
 						#now lock the door and wait till closed
 						door_status=$(wait_for_door_event $slot $close_door_timeout)
 						echo $door_status
@@ -958,21 +780,26 @@ do
 		fi
 	else
 		echo "employee not found..."
-		read -t 2 -p "Add ID? (y/n)" -a answer -N 1; echo #use this if run in terminal
-		if [ "$answer" == "y" ]; then #use this if run in terminal
-		# kbd_event=$(inotifywait -t 5 -q -e modify $kbd_file) #use this when run locally
-		# if [ ${#kbd_event} -gt 0 ];then
-		# 	slot=$(cat $kbd_file)
-		# 	re='^[0-9]+$'
-		# 	echo "keypressed: "$slot"*"
-		# else	
-		# 	echo "no key pressed"
-		# fi		
-		#if [ "$slot" == "1" ]; then #use this when run locally
+		#read -t 2 -p "Add ID? (y/n)" -a answer -N 1; echo #use this if run in terminal
+		kbd_event=$(inotifywait -t 5 -q -e modify $kbd_file) #use this when run locally
+		if [ ${#kbd_event} -gt 0 ];then
+			slot=$(cat $kbd_file)
+			re='^[0-9]+$'
+			echo "keypressed: "$slot"*"
+		else	
+			echo "no key pressed"
+		fi
+
+		#if [ "$answer" == "y" ]; then #use this if run in terminal
+		if [ "$slot" == "1" ]; then #use this when run locally
 			echo "employee added.."
-			echo "$nfc_id,$nfc_id_hex">>$employee_list
+			echo "0001,$nfc_id">>$employee_list
 		else	
 			echo "not added.."
 		fi
 	fi
 done
+
+
+
+
