@@ -25,9 +25,11 @@ def main():
 				value=splitData[1].strip('\n\r')
 				f = open('/tmp/txtalert/analog/'+param, "w")
 				f.write(value)
-				f.close()			
+				f.close()		
+			time.sleep(0.1)						
+
 		except:
-  				print("An exception occurred")
+  				print("An exception occurred")  		
 		
 	ser.close
 
