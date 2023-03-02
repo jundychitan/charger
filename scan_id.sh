@@ -44,7 +44,6 @@ WHITE=0xFFFFFF
 #ORANGE=0xFFFF00
 #ORANGE=0xFF
 ORANGE=0
-LED
 
 #charging parameters
 #harging_delay=45
