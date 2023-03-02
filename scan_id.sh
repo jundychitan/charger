@@ -34,7 +34,7 @@ door_lock_timeout=30	#time delay until lock
 
 #serial port
 serial_port=/dev/ttyAMA0
-#serial_port=/dev/ttyS0
+#serial_port=/dev/ttyS0 # b8:27:eb:f6:39:65
 
 #led color
 RED=0xFF0000
@@ -246,6 +246,7 @@ map_analog(){ #map slot to Analog input
 			;;
 
 
+	# b8:27:eb:f6:39:65
 	# case $1 in
 	# 	0) 
 	# 		echo "A0"
