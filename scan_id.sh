@@ -5,6 +5,10 @@
 #author			:jun dychitan (Dychitan Electronics Corp)
 #date 			:12012021
 #version 		:2.1
+
+#date 			:06072023
+#version 		:2.2
+#Rev History	: 1. disable charging monitoring				
 #=========================================================================================
 
 project_dir=/projects/charger
@@ -620,10 +624,10 @@ do
 							#check if phone is plugged to charger and is charging
 							lightup_led $slot $WHITE 1
 							echo $SECONDS
-							charging_state=$(wait_to_plug_charger_event $analog_port) #check if phone is plugged to charger
-							echo $SECONDS
-							echo $charging_state
-							#charging_state="charging"
+#	uncomment if charging monitoring is needed						charging_state=$(wait_to_plug_charger_event $analog_port) #check if phone is plugged to charger
+#	uncomment if charging monitoring is needed						echo $SECONDS
+#	uncomment if charging monitoring is needed						echo $charging_state
+							charging_state="charging" # comment this when charging monitoring is needed
 							if [ "$charging_state" == "charging" ]; then
 								lightup_led $slot $RED 1
 								initial_current=$(cat $analog_dir/$analog_port) #get the charging current																				
@@ -642,7 +646,8 @@ do
 							if [ "$door_status" == "door closed" ]; then
 								control_relay $slot $lock
 								if [ "$charging_state" == "charging" ]; then
-									charging_state=$(re_check_if_charging $analog_port $initial_current)
+#	uncomment if charging monitoring is needed									charging_state=$(re_check_if_charging $analog_port $initial_current)
+									charging_state="charging" # comment this if charging monitoring is needed
 									if [ "$charging_state" == "charging" ]; then
 										echo "$nfc_id,$(timestamp),slot $i">> $charging_list
 										echo "employee added to charging list"	
@@ -714,7 +719,8 @@ do
 								if [ "$door_status" == "door closed" ]; then
 									control_relay $slot $lock
 									if [ "$charging_state" == "charging" ]; then
-										charging_state=$(re_check_if_charging $analog_port $initial_current)
+#	uncomment if charging monitoring is needed									charging_state=$(re_check_if_charging $analog_port $initial_current)
+										charging_state="charging" # comment this if charging monitoring is needed																				
 										if [ "$charging_state" == "charging" ]; then
 											echo "${employee_id[1]},$(timestamp),slot $i">> $charging_list
 											echo "employee added to charging list"	
