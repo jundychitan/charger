@@ -551,7 +551,7 @@ do
 								control_relay $slot $lock
 							fi
 						else #slot seletected not in list
-							echo "slot not occupied..opening it anyway"
+							echo "$slot slot not occupied..opening it anyway"
 							lightup_led $slot $WHITE 1
 							control_relay_delay $slot $door_lock_timeout							
 							door_status=$(wait_for_door_event $slot $open_door_timeout)
