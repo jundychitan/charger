@@ -445,33 +445,34 @@ save_led(){
 }
 wait_to_plug_charger_event(){
 	#echo "wait to plug charger"
-	end=$((SECONDS+$charging_delay))
-	analog_port=$1
-	initial_current=$(cat $analog_dir/$analog_port)
-	initial_current=$((initial_current+10))
-	#echo "initial current:" $initial_current
-	#echo "charging current:" $charging_current
-	while [ $SECONDS -lt $end ]; do
-		# Do what you want.\
-		charging_current=$(cat /tmp/txtalert/analog/$analog_port)
-		if [ $charging_current -gt $initial_current ]; then
-			echo  "charging"
-			exit
-		fi
-		sleep 1
-	done
-	#echo "not charging"
+	# end=$((SECONDS+$charging_delay))
+	# analog_port=$1
+	# initial_current=$(cat $analog_dir/$analog_port)
+	# initial_current=$((initial_current+10))
+	# #echo "initial current:" $initial_current
+	# #echo "charging current:" $charging_current
+	# while [ $SECONDS -lt $end ]; do
+	# 	# Do what you want.\
+	# 	charging_current=$(cat /tmp/txtalert/analog/$analog_port)
+	# 	if [ $charging_current -gt $initial_current ]; then
+	# 		echo  "charging"
+	# 		exit
+	# 	fi
+	# 	sleep 1
+	# done
+	echo "charging"
 }
 re_check_if_charging(){
-	analog_port=$1
-	charging_current=$2
-	charging_current=$((charging_current-2))
-	final_current=$(cat $analog_dir//$analog_port)
-	if [ $final_current -lt $charging_current ]; then
-		echo "not charging"
-	else 
-		echo "charging"
-	fi  
+	# analog_port=$1
+	# charging_current=$2
+	# charging_current=$((charging_current-2))
+	# final_current=$(cat $analog_dir//$analog_port)
+	# if [ $final_current -lt $charging_current ]; then
+	# 	echo "not charging"
+	# else 
+	# 	echo "charging"
+	# fi  
+	echo "charging"
 }
 
 stty -F $serial_port 9600 -opost
@@ -624,10 +625,9 @@ do
 							#check if phone is plugged to charger and is charging
 							lightup_led $slot $WHITE 1
 							echo $SECONDS
-#	uncomment if charging monitoring is needed						charging_state=$(wait_to_plug_charger_event $analog_port) #check if phone is plugged to charger
-#	uncomment if charging monitoring is needed						echo $SECONDS
-#	uncomment if charging monitoring is needed						echo $charging_state
-							charging_state="charging" # comment this when charging monitoring is needed
+							charging_state=$(wait_to_plug_charger_event $analog_port) #check if phone is plugged to charger
+							echo $SECONDS
+							echo $charging_state							
 							if [ "$charging_state" == "charging" ]; then
 								lightup_led $slot $RED 1
 								initial_current=$(cat $analog_dir/$analog_port) #get the charging current																				
@@ -646,8 +646,7 @@ do
 							if [ "$door_status" == "door closed" ]; then
 								control_relay $slot $lock
 								if [ "$charging_state" == "charging" ]; then
-#	uncomment if charging monitoring is needed									charging_state=$(re_check_if_charging $analog_port $initial_current)
-									charging_state="charging" # comment this if charging monitoring is needed
+									charging_state=$(re_check_if_charging $analog_port $initial_current)									
 									if [ "$charging_state" == "charging" ]; then
 										echo "$nfc_id,$(timestamp),slot $i">> $charging_list
 										echo "employee added to charging list"	
@@ -719,8 +718,7 @@ do
 								if [ "$door_status" == "door closed" ]; then
 									control_relay $slot $lock
 									if [ "$charging_state" == "charging" ]; then
-#	uncomment if charging monitoring is needed									charging_state=$(re_check_if_charging $analog_port $initial_current)
-										charging_state="charging" # comment this if charging monitoring is needed																				
+										charging_state=$(re_check_if_charging $analog_port $initial_current)										
 										if [ "$charging_state" == "charging" ]; then
 											echo "${employee_id[1]},$(timestamp),slot $i">> $charging_list
 											echo "employee added to charging list"	
